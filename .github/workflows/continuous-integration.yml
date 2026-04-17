@@ -15,4 +15,4 @@ jobs:
           version: v1.1.21
       - run: aiken fmt --check
       - run: aiken check -D
-      - run: aiken docs --output ./docs
+      - run: aiken docs
