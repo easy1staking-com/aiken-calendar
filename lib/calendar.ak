@@ -88,10 +88,25 @@ pub fn to_ms(t: PosixTime) -> Int {
 
 /// Compose a `PosixTime` from a fully-specified `Civil` value.
 ///
-/// **Note:** does not validate field ranges. Out-of-range values silently
-/// normalise (e.g. `month = 13` rolls into the next year). Validate at the
-/// boundary if you accept user input.
+/// **Validates** every field and `expect`-fails the script on any
+/// out-of-range component. Valid ranges:
+///
+/// - `month ∈ 1..=12`
+/// - `day ∈ 1..=days_in_month_of(year, month)` (so `Feb 29` requires a leap year)
+/// - `hour ∈ 0..=23`
+/// - `minute, second ∈ 0..=59`
+/// - `millisecond ∈ 0..=999`
+///
+/// `year` may be any `Int` (proleptic Gregorian, BCE allowed).
 pub fn from_civil(c: Civil) -> PosixTime {
+  // Order: cheapest checks first (constant comparisons), then the one
+  // call into `days_in_month` which itself dispatches on `month`.
+  expect c.month >= 1 && c.month <= 12
+  expect c.hour >= 0 && c.hour <= 23
+  expect c.minute >= 0 && c.minute <= 59
+  expect c.second >= 0 && c.second <= 59
+  expect c.millisecond >= 0 && c.millisecond <= 999
+  expect c.day >= 1 && c.day <= internal.days_in_month(c.year, c.month)
   let day_index = internal.days_from_civil(c.year, c.month, c.day)
   let ms =
     day_index * ms_per_day + c.hour * ms_per_hour + c.minute * ms_per_minute + c.second * ms_per_second + c.millisecond
@@ -248,12 +263,9 @@ pub fn is_leap_year(year: Int) -> Bool {
 
 /// Last calendar day of `month` in `year` (28..=31).
 ///
-/// **Precondition:** `month` MUST be in the range `1..=12`. Out-of-range
-/// values do not error but return implementation-defined results
-/// (currently `31` for any non-`2`/`4`/`6`/`9`/`11` value, and `28`/`29`
-/// for `2`). Pass through your own validation if you accept untrusted
-/// input.
+/// `expect`-fails the script if `month` is outside `1..=12`.
 pub fn days_in_month_of(year: Int, month: Int) -> Int {
+  expect month >= 1 && month <= 12
   internal.days_in_month(year, month)
 }
 
@@ -329,4 +341,25 @@ test iso_day_of_week_sunday() {
 test iso_day_of_week_monday() {
   // 1970-01-05 was a Monday (ISO 1).
   iso_day_of_week(from_ms(4 * ms_per_day)) == 1
+}
+
+// `days_in_month_of` rejects invalid `month`.
+
+test days_in_month_of_accepts_valid_range() {
+  days_in_month_of(2024, 1) == 31 && days_in_month_of(2024, 2) == 29 && days_in_month_of(
+    2023,
+    2,
+  ) == 28 && days_in_month_of(2024, 12) == 31
+}
+
+test days_in_month_of_rejects_month_zero() fail {
+  days_in_month_of(2024, 0) == 0
+}
+
+test days_in_month_of_rejects_month_13() fail {
+  days_in_month_of(2024, 13) == 0
+}
+
+test days_in_month_of_rejects_month_negative() fail {
+  days_in_month_of(2024, -1) == 0
 }

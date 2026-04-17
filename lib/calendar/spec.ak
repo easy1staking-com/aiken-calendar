@@ -384,80 +384,107 @@ test add_months_mar31_minus_1_to_feb28() {
 }
 
 // =============================================================================
-// from_civil silently normalises out-of-range month values
-// (this is documented behaviour in lib/calendar.ak)
+// from_civil rejects every kind of out-of-range field (`expect`-bombs).
 // =============================================================================
 
-test from_civil_month_13_rolls_into_next_year() {
-  let t =
-    from_civil(
-      Civil {
-        year: 2024,
-        month: 13,
-        day: 15,
-        hour: 0,
-        minute: 0,
-        second: 0,
-        millisecond: 0,
-      },
-    )
-  to_civil(t) == Civil {
-    year: 2025,
-    month: 1,
+// Helper: a valid baseline we mutate one field at a time.
+fn baseline_civil() -> Civil {
+  Civil {
+    year: 2024,
+    month: 6,
     day: 15,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    millisecond: 0,
+    hour: 12,
+    minute: 30,
+    second: 45,
+    millisecond: 500,
   }
 }
 
-test from_civil_month_zero_rolls_into_prior_year() {
-  let t =
-    from_civil(
-      Civil {
-        year: 2024,
-        month: 0,
-        day: 15,
-        hour: 0,
-        minute: 0,
-        second: 0,
-        millisecond: 0,
-      },
-    )
-  to_civil(t) == Civil {
-    year: 2023,
-    month: 12,
-    day: 15,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    millisecond: 0,
-  }
+test from_civil_baseline_is_valid() {
+  // Sanity: confirm the baseline itself round-trips. If this ever fails
+  // the negative tests below would silently start passing for the wrong
+  // reason.
+  to_civil(from_civil(baseline_civil())) == baseline_civil()
 }
 
-test from_civil_month_negative_rolls_back() {
+// `fail` tests must consume the result, otherwise Aiken eliminates
+// the call as dead code and the `expect` never fires.
+
+test from_civil_rejects_month_13() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), month: 13 })) == 0
+}
+
+test from_civil_rejects_month_zero() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), month: 0 })) == 0
+}
+
+test from_civil_rejects_month_negative() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), month: -1 })) == 0
+}
+
+test from_civil_rejects_day_zero() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), day: 0 })) == 0
+}
+
+test from_civil_rejects_day_too_large_for_month() fail {
+  // June only has 30 days.
+  to_ms(from_civil(Civil { ..baseline_civil(), day: 31 })) == 0
+}
+
+test from_civil_rejects_feb_29_in_non_leap_year() fail {
+  to_ms(
+    from_civil(
+      Civil {
+        year: 2023,
+        month: 2,
+        day: 29,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        millisecond: 0,
+      },
+    ),
+  ) == 0
+}
+
+test from_civil_accepts_feb_29_in_leap_year() {
   let t =
     from_civil(
       Civil {
         year: 2024,
-        month: -1,
-        day: 15,
+        month: 2,
+        day: 29,
         hour: 0,
         minute: 0,
         second: 0,
         millisecond: 0,
       },
     )
-  to_civil(t) == Civil {
-    year: 2023,
-    month: 11,
-    day: 15,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    millisecond: 0,
-  }
+  to_civil(t).day == 29
+}
+
+test from_civil_rejects_hour_24() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), hour: 24 })) == 0
+}
+
+test from_civil_rejects_hour_negative() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), hour: -1 })) == 0
+}
+
+test from_civil_rejects_minute_60() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), minute: 60 })) == 0
+}
+
+test from_civil_rejects_second_60() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), second: 60 })) == 0
+}
+
+test from_civil_rejects_millisecond_1000() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), millisecond: 1000 })) == 0
+}
+
+test from_civil_rejects_millisecond_negative() fail {
+  to_ms(from_civil(Civil { ..baseline_civil(), millisecond: -1 })) == 0
 }
 
 // =============================================================================
