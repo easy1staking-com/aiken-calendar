@@ -1,4 +1,4 @@
-name = "gargiulo/calendar"
+name = "easy1staking-com/aiken-calendar"
 version = "0.1.0"
 compiler = "v1.1.21"
 plutus = "v3"
@@ -6,8 +6,8 @@ license = "Apache-2.0"
 description = "POSIX-millisecond time arithmetic for Aiken / Cardano on-chain code: Gregorian decomposition, calendar-aware add_months/add_years with day clamping, and total ordering."
 
 [repository]
-user = "gargiulo"
-project = "calendar"
+user = "easy1staking-com"
+project = "aiken-calendar"
 platform = "github"
 
 [[dependencies]]

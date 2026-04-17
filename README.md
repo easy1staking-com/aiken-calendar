@@ -39,7 +39,7 @@ algorithm.
 ```toml
 # aiken.toml
 [[dependencies]]
-name = "gargiulo/calendar"
+name = "easy1staking-com/aiken-calendar"
 version = "0.1.0"
 source = "github"
 ```
